@@ -1,0 +1,29 @@
+---
+# Main SSID for the network
+ssid_principal: "reseau"
+# VLAN ID for the main network
+vlan_principal: 1
+# Mobility domain for 802.11r (Fast Roaming) - Must be the same for all APs
+mobilidade_dominio: "r353" # RESEAU
+
+# Main network IP range
+rede_principal_ip_range: "172.20.0.0/16"
+# Main gateway IP
+gateway_principal_ip: "172.20.0.1"
+# Backup gateway IP
+gateway_backup_ip: "172.20.0.2"
+
+# Fast Roaming Configuration
+fast_roaming_config:
+  # NAS identifier (unique per AP) - Using the device's MAC address as an example
+  nas_identifier: "{{ ansible_default_ipv4.macaddress }}"
+  # Mobility domain (same for all APs)
+  mobility_domain: "{{ mobilidade_dominio }}"
+  # r0 key holder (MAC address of the AP)
+  r0_key_holder: "{{ ansible_default_ipv4.macaddress }}"
+  # r1 key holder (MAC address of the AP)
+  r1_key_holder: "{{ ansible_default_ipv4.macaddress }}"
+  # r0 key lifetime in minutes (default: 10080 - 7 days)
+  r0_key_lifetime: "10080"
+  # Reassociation deadline in milliseconds (default: 1000 - 1 second)
+  reassociation_deadline: "1000"
