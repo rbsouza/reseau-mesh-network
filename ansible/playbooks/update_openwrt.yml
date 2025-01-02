@@ -1,0 +1,60 @@
+---
+- name: Update OpenWrt on all devices
+  hosts: all
+  gather_facts: true # Gather facts is needed for the openwrt_version variable
+
+  tasks:
+    - name: Check connectivity
+      ansible.builtin.ping:
+
+    - name: Backup current configuration
+      ansible.builtin.command:
+        cmd: /sbin/sysupgrade -b /tmp/backup-$(date +%Y%m%d-%H%M%S).tar.gz
+      register: backup_result
+      changed_when: false
+
+    - name: Display backup file name
+      ansible.builtin.debug:
+        var: backup_result.stdout_lines
+
+    - name: Download OpenWrt firmware
+      ansible.builtin.get_url:
+        url: "https://downloads.openwrt.org/releases/{{ openwrt_version }}/targets/{{ ansible_architecture }}/{{ openwrt_target }}/openwrt-{{ openwrt_version }}-{{ ansible_architecture }}-{{ openwrt_target }}-{{ openwrt_model }}-squashfs-sysupgrade.bin"
+        dest: "/tmp/firmware.bin"
+        mode: '0644'
+      register: download_firmware
+      when: openwrt_version is defined
+
+    - name: Download latest OpenWrt firmware
+      ansible.builtin.get_url:
+        url: "https://downloads.openwrt.org/releases/{{ ansible_architecture }}/{{ openwrt_target }}/latest/openwrt-{{ ansible_architecture }}-{{ openwrt_target }}-{{ openwrt_model }}-squashfs-sysupgrade.bin"
+        dest: "/tmp/firmware.bin"
+        mode: '0644'
+      register: download_firmware
+      when: openwrt_version is not defined
+
+    - name: Perform sysupgrade
+      ansible.builtin.command:
+        cmd: /sbin/sysupgrade -v -n /tmp/firmware.bin
+      register: sysupgrade_result
+      changed_when: "'Upgrading' in sysupgrade_result.stdout"
+
+    - name: Reboot the device
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+
+    - name: Wait for device to come back online
+      ansible.builtin.wait_for_connection:
+        delay: 60 # Wait for 60 seconds before checking the connection
+        sleep: 10 # Wait 10 seconds between each connection attempt
+        timeout: 300
+
+    - name: Check OpenWrt version after upgrade
+      ansible.builtin.command:
+        cmd: cat /etc/openwrt_release
+      register: openwrt_release
+      changed_when: false
+
+    - name: Display OpenWrt version
+      ansible.builtin.debug:
+        var: openwrt_release.stdout_lines
